@@ -57,4 +57,9 @@ function zaw-open-book() {
     # Delete files older than a month. Nobody keeps books opens for more than a month, right? Right?
     find "${temp_dir}/" -type f -mtime -30 -delete > /dev/null 2>&1 &!
 }
-zaw-register-src -n calibre zaw-src-calibre
+if declare -f -F zaw-register-src ; then
+    zaw-register-src -n calibre zaw-src-calibre
+else
+    echo "zaw (https://github.com/zsh-users/zaw) is not loaded, Please load it first"
+    return
+fi
