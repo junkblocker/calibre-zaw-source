@@ -28,32 +28,33 @@ function zaw-show-metadata() {
 function zaw-open-book() {
     emulate -L zsh
 
-    local open bookid format
+    local open bookid format temp_dir
     case "${(L)OSTYPE}" in
-        linux*|*bsd*)
-            open="xdg-open"
-            ;;
-        darwin*)
-            open="open"
-            ;;
-        *)
-            # TODO: what is the best fallback?
-            open="xdg-open"
-            ;;
+        linux*|*bsd*) open="xdg-open" ;;
+        darwin*)      open="open" ;;
+        *)            open="xdg-open" ;; # TODO: what is the best fallback?
     esac
 
     bookid="${(q)1}"
-    if ! mkdir -p /tmp/zaw-calibre ; then
-        echo "Could not create directory /tmp/zaw-calibre"
+
+    # TODO: Figure out if there's a way to open it directly from the calibre
+    # source location because these temporary files can't be cleaned up
+    # deterministically as they are opened for use.
+
+    temp_dir="${TMPDIR:-${TEMP:-${TMP:-/tmp}}}/zaw-source-calibre"
+    if ! mkdir -p "$temp_dir" ; then
+        echo "Could not create temporary directory $temp_dir"
         return
     fi
     for format in pdf epub rtf doc docx chm mht ps ppt pptx txt djvu mobi lit ; do
-        calibredb export --formats $format --to-dir=/tmp/zaw-calibre --dont-update-metadata --dont-write-opf --dont-save-cover --template=$bookid $bookid
-        if [ -f /tmp/zaw-calibre/${bookid}.${format} ]; then
-            BUFFER="${open} \"/tmp/zaw-calibre/${bookid}.${format}\""
+        calibredb export --formats $format --to-dir="$temp_dir" --replace-whitespace --dont-update-metadata --dont-write-opf --dont-save-cover --template="$bookid" "$bookid"
+        if [ -f "$temp_dir/${bookid}.${format}" ]; then
+            BUFFER="${open} '$temp_dir/${bookid}.${format}'"
             zle accept-line
             break
         fi
     done
+    # Delete files older than a month. Nobody keeps books opens for more than a month, right? Right?
+    find "${temp_dir}/" -type f -mtime -30 -delete > /dev/null 2>&1 &!
 }
 zaw-register-src -n calibre zaw-src-calibre
