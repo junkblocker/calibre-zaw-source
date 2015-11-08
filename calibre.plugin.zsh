@@ -7,9 +7,19 @@
 function zaw-src-calibre() {
     emulate -L zsh
     setopt local_options extended_glob null_glob
+    local calibredb_binary
 
-    if which calibredb > /dev/null 2>&1; then
-        calibredb list --sort-by title | tail +2 | while read id rest; do
+    calibredb_binary="$(command -v calibredb)"
+    if [ -z "$calibredb_binary" ]; then
+        for loc in "/" "$HOME/" ; do
+            if [ -x "${loc}Applications/calibre.app/Contents/MacOS/calibredb" ]; then
+                calibredb_binary="${loc}Applications/calibre.app/Contents/MacOS/calibredb"
+                break
+            fi
+        done
+    fi
+    if [ -n "$calibredb_binary" ]; then
+        "$calibredb_binary" list --sort-by title | tail +2 | while read id rest; do
             candidates+=("${id}")
             cand_descriptions+=("${rest}")
         done
@@ -46,20 +56,34 @@ function zaw-open-book() {
         echo "Could not create temporary directory $temp_dir"
         return
     fi
-    for format in pdf epub rtf doc docx chm mht ps ppt pptx txt djvu mobi lit ; do
-        calibredb export --formats $format --to-dir="$temp_dir" --replace-whitespace --dont-update-metadata --dont-write-opf --dont-save-cover --template="$bookid" "$bookid"
-        if [ -f "$temp_dir/${bookid}.${format}" ]; then
-            BUFFER="${open} '$temp_dir/${bookid}.${format}'"
-            zle accept-line
-            break
-        fi
-    done
+    calibredb_binary="$(command -v calibredb)"
+    if [ -z "$calibredb_binary" ]; then
+        for loc in "/" "$HOME/" ; do
+            if [ -x "${loc}Applications/calibre.app/Contents/MacOS/calibredb" ]; then
+                calibredb_binary="${loc}Applications/calibre.app/Contents/MacOS/calibredb"
+                break
+            fi
+        done
+    fi
+    if [ -n "$calibredb_binary" ]; then
+        for format in pdf epub rtf doc docx chm mht ps ppt pptx txt djvu mobi lit ; do
+            calibredb export --formats $format --to-dir="$temp_dir" --replace-whitespace --dont-update-metadata --dont-write-opf --dont-save-cover --template="$bookid" "$bookid"
+            if [ -f "$temp_dir/${bookid}.${format}" ]; then
+                BUFFER="${open} '$temp_dir/${bookid}.${format}'"
+                zle accept-line
+                break
+            fi
+        done
     # Delete files older than a month. Nobody keeps books opens for more than a month, right? Right?
     find "${temp_dir}/" -type f -mtime -30 -delete > /dev/null 2>&1 &!
+    else
+        echo "Calibre or Calibre command line tools are not installed"
+        return
+    fi
 }
-if declare -f -F zaw-register-src ; then
+if [[ -n $(declare -f -F zaw-register-src) ]]; then
     zaw-register-src -n calibre zaw-src-calibre
 else
-    echo "zaw (https://github.com/zsh-users/zaw) is not loaded, Please load it first"
-    return
+    echo "calibre-zaw-source is not loaded since zaw is not loaded."
+    echo "Please load zaw first."
 fi
