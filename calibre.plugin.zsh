@@ -67,15 +67,15 @@ function zaw-open-book() {
     fi
     if [ -n "$calibredb_binary" ]; then
         for format in pdf epub rtf doc docx chm mht ps ppt pptx txt djvu mobi lit ; do
-            calibredb export --formats $format --to-dir="$temp_dir" --replace-whitespace --dont-update-metadata --dont-write-opf --dont-save-cover --template="$bookid" "$bookid"
+            calibredb export --formats $format --to-dir="$temp_dir" --replace-whitespace --dont-update-metadata --dont-write-opf --dont-save-cover --template="$bookid" "$bookid" > /dev/null 2>&1
             if [ -f "$temp_dir/${bookid}.${format}" ]; then
                 BUFFER="${open} '$temp_dir/${bookid}.${format}'"
                 zle accept-line
                 break
             fi
         done
-    # Delete files older than a month. Nobody keeps books opens for more than a month, right? Right?
-    find "${temp_dir}/" -type f -mtime -30 -delete > /dev/null 2>&1 &!
+        # Delete files older than a month. Nobody keeps books opens for more than a month, right? Right?
+        find "${temp_dir}/" -type f -mtime +30 -delete > /dev/null 2>&1 &!
     else
         echo "Calibre or Calibre command line tools are not installed"
         return
