@@ -38,7 +38,7 @@ function zaw-show-metadata() {
 function zaw-open-book() {
     emulate -L zsh
 
-    local open bookid format temp_dir
+    local open bookid format temp_dir found
     case "${(L)OSTYPE}" in
         linux*|*bsd*) open="xdg-open" ;;
         darwin*)      open="open" ;;
@@ -66,14 +66,22 @@ function zaw-open-book() {
         done
     fi
     if [ -n "$calibredb_binary" ]; then
+        found=0
         for format in pdf epub rtf doc docx chm mht ps ppt pptx txt djvu mobi lit ; do
             calibredb export --formats $format --to-dir="$temp_dir" --replace-whitespace --dont-update-metadata --dont-write-opf --dont-save-cover --template="$bookid" "$bookid" > /dev/null 2>&1
             if [ -f "$temp_dir/${bookid}.${format}" ]; then
-                BUFFER="${open} '$temp_dir/${bookid}.${format}'"
-                zle accept-line
-                break
+                if [ $found -eq 1 ]; then
+                    BUFFER="$BUFFER '$temp_dir/${bookid}.${format}'"
+                else
+                    BUFFER="${open} '$temp_dir/${bookid}.${format}'"
+                fi
+                found=1
             fi
         done
+        if [ $found -eq 1 ]; then
+            BUFFER="$BUFFER '$temp_dir/'"
+            zle accept-line
+        fi
         # Delete files older than a month. Nobody keeps books opens for more than a month, right? Right?
         find "${temp_dir}/" -type f -mtime +30 -delete > /dev/null 2>&1 &!
     else
