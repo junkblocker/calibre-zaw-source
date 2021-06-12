@@ -19,7 +19,7 @@ function zaw-src-calibre() {
         done
     fi
     if [ -n "$calibredb_binary" ]; then
-        "$calibredb_binary" list --sort-by title -f title,authors,tags,isbn,publisher,series -w 999999 | tail +2 | while read id rest; do
+        "$calibredb_binary" list --sort-by title -f title,authors,tags,isbn,publisher,series -w 999999 | tail -n +2 | while read id rest; do
             candidates+=("${id}")
             cand_descriptions+=("${rest}")
         done
